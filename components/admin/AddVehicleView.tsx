@@ -1,0 +1,347 @@
+'use client'
+
+import { useState } from 'react'
+import { createVehicle } from '@/lib/admin/api'
+import type { CreateVehicleData } from '@/lib/admin/api'
+
+export default function AddVehicleView() {
+  const [formData, setFormData] = useState<CreateVehicleData>({
+    make: '',
+    model: '',
+    year: '',
+    sellingPrice: '',
+    mileage: '',
+    transmission: '',
+    fuelType: '',
+    color: '',
+    engine: '',
+    drivetrain: '',
+    description: '',
+    images: [],
+    isActive: true,
+  })
+  const [imagesInput, setImagesInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'year' || name === 'sellingPrice' || name === 'mileage' 
+        ? (value === '' ? '' : Number(value))
+        : value,
+    }))
+  }
+
+  const handleImagesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setImagesInput(value)
+    // Split by newline or comma and filter empty strings
+    const imageUrls = value
+      .split(/[,\n]/)
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0)
+    setFormData((prev) => ({
+      ...prev,
+      images: imageUrls,
+    }))
+  }
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: checked,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess(false)
+    setLoading(true)
+
+    try {
+      // Validate required fields
+      if (!formData.make || !formData.model || !formData.year || !formData.sellingPrice) {
+        throw new Error('Please fill in all required fields (Make, Model, Year, Selling Price)')
+      }
+
+      await createVehicle(formData)
+      setSuccess(true)
+      // Reset form
+      setFormData({
+        make: '',
+        model: '',
+        year: '',
+        sellingPrice: '',
+        mileage: '',
+        transmission: '',
+        fuelType: '',
+        color: '',
+        engine: '',
+        drivetrain: '',
+        description: '',
+        images: [],
+        isActive: true,
+      })
+      setImagesInput('')
+    } catch (err: any) {
+      setError(err.message || 'Failed to create vehicle')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Add New Vehicle</h2>
+
+      {error && (
+        <div className="mb-4 rounded-md bg-red-50 p-4">
+          <div className="text-sm text-red-800">{error}</div>
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 rounded-md bg-green-50 p-4">
+          <div className="text-sm text-green-800">Vehicle created successfully!</div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {/* Required Fields */}
+          <div>
+            <label htmlFor="make" className="block text-sm font-medium text-gray-700">
+              Make <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="make"
+              id="make"
+              required
+              value={formData.make}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="model" className="block text-sm font-medium text-gray-700">
+              Model <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="model"
+              id="model"
+              required
+              value={formData.model}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+              Year <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="year"
+              id="year"
+              required
+              min="1900"
+              max="2100"
+              value={formData.year}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="sellingPrice" className="block text-sm font-medium text-gray-700">
+              Selling Price <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="sellingPrice"
+              id="sellingPrice"
+              required
+              min="0"
+              step="0.01"
+              value={formData.sellingPrice}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          {/* Optional Fields */}
+          <div>
+            <label htmlFor="mileage" className="block text-sm font-medium text-gray-700">
+              Mileage
+            </label>
+            <input
+              type="number"
+              name="mileage"
+              id="mileage"
+              min="0"
+              value={formData.mileage}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="transmission" className="block text-sm font-medium text-gray-700">
+              Transmission
+            </label>
+            <select
+              name="transmission"
+              id="transmission"
+              value={formData.transmission}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Select...</option>
+              <option value="Automatic">Automatic</option>
+              <option value="Manual">Manual</option>
+              <option value="CVT">CVT</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="fuelType" className="block text-sm font-medium text-gray-700">
+              Fuel Type
+            </label>
+            <select
+              name="fuelType"
+              id="fuelType"
+              value={formData.fuelType}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Select...</option>
+              <option value="Petrol">Petrol</option>
+              <option value="Diesel">Diesel</option>
+              <option value="Electric">Electric</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="color" className="block text-sm font-medium text-gray-700">
+              Color
+            </label>
+            <input
+              type="text"
+              name="color"
+              id="color"
+              value={formData.color}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="engine" className="block text-sm font-medium text-gray-700">
+              Engine
+            </label>
+            <input
+              type="text"
+              name="engine"
+              id="engine"
+              value={formData.engine}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="drivetrain" className="block text-sm font-medium text-gray-700">
+              Drivetrain
+            </label>
+            <select
+              name="drivetrain"
+              id="drivetrain"
+              value={formData.drivetrain}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Select...</option>
+              <option value="FWD">FWD</option>
+              <option value="RWD">RWD</option>
+              <option value="AWD">AWD</option>
+              <option value="4WD">4WD</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              name="description"
+              id="description"
+              rows={4}
+              value={formData.description}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="images" className="block text-sm font-medium text-gray-700">
+              Image URLs (one per line or comma-separated)
+            </label>
+            <textarea
+              name="images"
+              id="images"
+              rows={4}
+              value={imagesInput}
+              onChange={handleImagesChange}
+              placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+            {formData.images && formData.images.length > 0 && (
+              <p className="mt-1 text-sm text-gray-500">
+                {formData.images.length} image(s) added
+              </p>
+            )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="isActive"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={handleCheckboxChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                Active (visible on website)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating Vehicle...' : 'Create Vehicle'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
