@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { FaUser, FaEnvelope, FaPhone, FaWhatsapp, FaComment, FaTimes, FaCheck, FaCar } from 'react-icons/fa'
 import { createQuoteRequest } from '@/lib/api'
 import type { Vehicle, QuoteRequestData } from '@/lib/api'
+import { getMakeLabel } from '@/lib/constants/vehicleMakes'
 
 interface QuoteFormData {
   fullName: string
@@ -26,7 +27,7 @@ export default function QuoteRequestWidget({ vehicle, onClose }: QuoteRequestWid
   }
 
   const vehicleName = vehicle 
-    ? `${vehicle.make || ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() || 'Vehicle'
+    ? `${vehicle.make ? getMakeLabel(vehicle.make) : ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() || 'Vehicle'
     : 'Vehicle'
   
   const vehiclePrice = vehicle ? formatPrice(vehicle.price || vehicle.sellingPrice) : 'N/A'
@@ -36,7 +37,7 @@ export default function QuoteRequestWidget({ vehicle, onClose }: QuoteRequestWid
     emailAddress: '',
     phoneNumber: '',
     whatsappNumber: '',
-    remarks: vehicle ? `${vehicle.make || ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() : ''
+    remarks: vehicle ? `${vehicle.make ? getMakeLabel(vehicle.make) : ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() : ''
   })
   
   const [errors, setErrors] = useState<Partial<QuoteFormData>>({})

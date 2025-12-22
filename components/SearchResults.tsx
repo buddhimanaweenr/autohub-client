@@ -1,24 +1,47 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FaSearch, FaChevronDown } from 'react-icons/fa'
 import { fetchVehicles, Vehicle } from '@/lib/api'
+import { getMakeLabel, VEHICLE_MAKES } from '@/lib/constants/vehicleMakes'
 
 export default function SearchResults() {
-  const [filters, setFilters] = useState({
-    make: 'All',
-    year: '2015',
-    yearTo: '2020',
-    priceMin: '30',
-    priceMax: '40',
-    transmission: 'Normal',
-    fuelType: 'Hybrid'
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // Initialize filters from URL parameters
+  const getInitialFilters = () => ({
+    make: searchParams.get('make') || 'All',
+    year: searchParams.get('year') || '',
+    yearTo: searchParams.get('yearTo') || '',
+    priceMin: searchParams.get('priceMin') || '',
+    priceMax: searchParams.get('priceMax') || '',
+    transmission: searchParams.get('transmission') || 'All',
+    fuelType: searchParams.get('fuelType') || 'All'
   })
+
+  const [filters, setFilters] = useState(getInitialFilters())
   const [cars, setCars] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+
+  // Update filters when URL parameters change
+  useEffect(() => {
+    const newFilters = {
+      make: searchParams.get('make') || 'All',
+      year: searchParams.get('year') || '',
+      yearTo: searchParams.get('yearTo') || '',
+      priceMin: searchParams.get('priceMin') || '',
+      priceMax: searchParams.get('priceMax') || '',
+      transmission: searchParams.get('transmission') || 'All',
+      fuelType: searchParams.get('fuelType') || 'All'
+    }
+    setFilters(newFilters)
+    setSearchQuery(searchParams.get('q') || '')
+  }, [searchParams])
 
   useEffect(() => {
     async function loadVehicles() {
@@ -37,6 +60,40 @@ export default function SearchResults() {
 
     loadVehicles()
   }, [])
+
+  // Update URL when filters change
+  const updateFilters = (newFilters: typeof filters) => {
+    setFilters(newFilters)
+    const params = new URLSearchParams()
+    
+    if (newFilters.make && newFilters.make !== 'All') {
+      params.set('make', newFilters.make)
+    }
+    if (newFilters.year) {
+      params.set('year', newFilters.year)
+    }
+    if (newFilters.yearTo) {
+      params.set('yearTo', newFilters.yearTo)
+    }
+    if (newFilters.priceMin) {
+      params.set('priceMin', newFilters.priceMin)
+    }
+    if (newFilters.priceMax) {
+      params.set('priceMax', newFilters.priceMax)
+    }
+    if (newFilters.transmission && newFilters.transmission !== 'All') {
+      params.set('transmission', newFilters.transmission)
+    }
+    if (newFilters.fuelType && newFilters.fuelType !== 'All') {
+      params.set('fuelType', newFilters.fuelType)
+    }
+    if (searchQuery) {
+      params.set('q', searchQuery)
+    }
+    
+    const queryString = params.toString()
+    router.push(`/search${queryString ? `?${queryString}` : ''}`, { scroll: false })
+  }
 
   // Format price helper
   const formatPrice = (price: string | number | undefined): string => {
@@ -65,14 +122,73 @@ export default function SearchResults() {
 
   // Filter cars based on search and filters
   const filteredCars = cars.filter((car) => {
+    // Search query filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      const makeModel = `${car.make || ''} ${car.model || ''}`.toLowerCase()
+      const makeLabel = car.make ? getMakeLabel(car.make) : ''
+      const makeModel = `${makeLabel} ${car.model || ''}`.toLowerCase()
       if (!makeModel.includes(query)) {
         return false
       }
     }
-    // Add more filter logic here if needed
+
+    // Make filter
+    if (filters.make && filters.make !== 'All') {
+      if (car.make !== filters.make) {
+        return false
+      }
+    }
+
+    // Year filter
+    if (filters.year) {
+      const year = typeof car.year === 'string' ? parseInt(car.year) : (car.year || 0)
+      const filterYear = parseInt(filters.year)
+      if (year < filterYear) {
+        return false
+      }
+    }
+    if (filters.yearTo) {
+      const year = typeof car.year === 'string' ? parseInt(car.year) : (car.year || 0)
+      const filterYearTo = parseInt(filters.yearTo)
+      if (year > filterYearTo) {
+        return false
+      }
+    }
+
+    // Price filter
+    if (filters.priceMin) {
+      const price = typeof car.sellingPrice === 'number' 
+        ? car.sellingPrice 
+        : (typeof car.price === 'number' ? car.price : parseFloat(String(car.price || car.sellingPrice || 0)))
+      const minPrice = parseFloat(filters.priceMin) * 1000 // Convert k to actual value
+      if (price < minPrice) {
+        return false
+      }
+    }
+    if (filters.priceMax) {
+      const price = typeof car.sellingPrice === 'number' 
+        ? car.sellingPrice 
+        : (typeof car.price === 'number' ? car.price : parseFloat(String(car.price || car.sellingPrice || 0)))
+      const maxPrice = parseFloat(filters.priceMax) * 1000 // Convert k to actual value
+      if (price > maxPrice) {
+        return false
+      }
+    }
+
+    // Transmission filter
+    if (filters.transmission && filters.transmission !== 'All') {
+      if (car.transmission !== filters.transmission) {
+        return false
+      }
+    }
+
+    // Fuel Type filter
+    if (filters.fuelType && filters.fuelType !== 'All') {
+      if (car.fuelType !== filters.fuelType) {
+        return false
+      }
+    }
+
     return true
   })
 
@@ -89,13 +205,17 @@ export default function SearchResults() {
                 {/* Make Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Make</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option>All</option>
-                    <option>Honda</option>
-                    <option>BMW</option>
-                    <option>Audi</option>
-                    <option>Toyota</option>
-                    <option>Nissan</option>
+                  <select 
+                    value={filters.make}
+                    onChange={(e) => updateFilters({ ...filters, make: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="All">All</option>
+                    {VEHICLE_MAKES.map((make) => (
+                      <option key={make.value} value={make.value}>
+                        {make.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -105,12 +225,16 @@ export default function SearchResults() {
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
-                      placeholder="2015"
+                      placeholder="From"
+                      value={filters.year}
+                      onChange={(e) => updateFilters({ ...filters, year: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                     <input
                       type="number"
-                      placeholder="2020"
+                      placeholder="To"
+                      value={filters.yearTo}
+                      onChange={(e) => updateFilters({ ...filters, yearTo: e.target.value })}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
@@ -118,37 +242,54 @@ export default function SearchResults() {
 
                 {/* Price Range */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-500">30k</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Range (in thousands)</label>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
                     <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      className="flex-1"
+                      type="number"
+                      placeholder="Min"
+                      value={filters.priceMin}
+                      onChange={(e) => updateFilters({ ...filters, priceMin: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
-                    <span className="text-sm text-gray-500">40k</span>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      value={filters.priceMax}
+                      onChange={(e) => updateFilters({ ...filters, priceMax: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
                   </div>
                 </div>
 
                 {/* Transmission */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Transmission</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option>Normal</option>
-                    <option>Automatic</option>
-                    <option>Manual</option>
+                  <select 
+                    value={filters.transmission}
+                    onChange={(e) => updateFilters({ ...filters, transmission: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="All">All</option>
+                    <option value="Automatic">Automatic</option>
+                    <option value="Manual">Manual</option>
+                    <option value="CVT">CVT</option>
                   </select>
                 </div>
 
                 {/* Fuel Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Type</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option>Hybrid</option>
-                    <option>Gasoline</option>
-                    <option>Diesel</option>
-                    <option>Electric</option>
+                  <select 
+                    value={filters.fuelType}
+                    onChange={(e) => updateFilters({ ...filters, fuelType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="All">All</option>
+                    <option value="Petrol">Petrol</option>
+                    <option value="Gasoline">Gasoline</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Hybrid">Hybrid</option>
                   </select>
                 </div>
               </div>
@@ -167,7 +308,16 @@ export default function SearchResults() {
                       type="text"
                       placeholder="Filter by search..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value)
+                        const params = new URLSearchParams(searchParams.toString())
+                        if (e.target.value) {
+                          params.set('q', e.target.value)
+                        } else {
+                          params.delete('q')
+                        }
+                        router.push(`/search${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
+                      }}
                       className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                     <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -228,13 +378,13 @@ export default function SearchResults() {
                           <div className="aspect-w-16 aspect-h-12">
                             <img
                               src={getVehicleImage(car)}
-                              alt={`${car.make || 'Unknown'} ${car.model || 'Vehicle'}`}
+                              alt={`${car.make ? getMakeLabel(car.make) : 'Unknown'} ${car.model || 'Vehicle'}`}
                               className="w-full h-48 object-cover"
                             />
                           </div>
                           <div className="p-4">
                             <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                              {car.make || 'Unknown'} {car.model || 'Vehicle'}
+                              {car.make ? getMakeLabel(car.make) : 'Unknown'} {car.model || 'Vehicle'}
                             </h3>
                             {car.year && <p className="text-gray-600 text-sm mb-2">{car.year}</p>}
                             {car.mileage && <p className="text-gray-500 text-sm mb-2">{formatMileage(car.mileage)}</p>}

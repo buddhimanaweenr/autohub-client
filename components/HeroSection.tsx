@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { FaSearch, FaChevronDown, FaCog, FaCar, FaCalendarAlt, FaDollarSign, FaCog as FaGear } from 'react-icons/fa'
+import { VEHICLE_MAKES } from '@/lib/constants/vehicleMakes'
 
 interface DropdownOption {
   value: string
@@ -117,6 +119,7 @@ function CustomDropdown({ options, value, onChange, placeholder, icon, className
 }
 
 export default function HeroSection() {
+  const router = useRouter()
   const [searchData, setSearchData] = useState({
     make: '',
     model: '',
@@ -130,28 +133,35 @@ export default function HeroSection() {
 
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const carMakes: DropdownOption[] = [
-    { value: 'toyota', label: 'Toyota', icon: <FaCar />, count: 45230 },
-    { value: 'honda', label: 'Honda', icon: <FaCar />, count: 32150 },
-    { value: 'nissan', label: 'Nissan', icon: <FaCar />, count: 28940 },
-    { value: 'mazda', label: 'Mazda', icon: <FaCar />, count: 18720 },
-    { value: 'suzuki', label: 'Suzuki', icon: <FaCar />, count: 15680 },
-    { value: 'mitsubishi', label: 'Mitsubishi', icon: <FaCar />, count: 12340 },
-    { value: 'daihatsu', label: 'Daihatsu', icon: <FaCar />, count: 9870 },
-    { value: 'subaru', label: 'Subaru', icon: <FaCar />, count: 7650 },
-    { value: 'volkswagen', label: 'Volkswagen', icon: <FaCar />, count: 5430 },
-    { value: 'bmw', label: 'BMW', icon: <FaCar />, count: 4320 },
-    { value: 'mercedes', label: 'Mercedes-Benz', icon: <FaCar />, count: 3890 },
-    { value: 'audi', label: 'Audi', icon: <FaCar />, count: 3210 },
-    { value: 'lexus', label: 'Lexus', icon: <FaCar />, count: 2890 },
-    { value: 'landrover', label: 'Land Rover', icon: <FaCar />, count: 2340 },
-    { value: 'ford', label: 'Ford', icon: <FaCar />, count: 1980 },
-    { value: 'peugeot', label: 'Peugeot', icon: <FaCar />, count: 1650 },
-    { value: 'jeep', label: 'Jeep', icon: <FaCar />, count: 1420 },
-    { value: 'jaguar', label: 'Jaguar', icon: <FaCar />, count: 980 },
-    { value: 'hyundai', label: 'Hyundai', icon: <FaCar />, count: 870 },
-    { value: 'kia', label: 'Kia', icon: <FaCar />, count: 650 }
-  ]
+  // Counts for display purposes (can be made dynamic later)
+  const makeCounts: { [key: string]: number } = {
+    toyota: 45230,
+    honda: 32150,
+    nissan: 28940,
+    mazda: 18720,
+    suzuki: 15680,
+    mitsubishi: 12340,
+    daihatsu: 9870,
+    subaru: 7650,
+    volkswagen: 5430,
+    bmw: 4320,
+    mercedes: 3890,
+    audi: 3210,
+    lexus: 2890,
+    landrover: 2340,
+    ford: 1980,
+    peugeot: 1650,
+    jeep: 1420,
+    jaguar: 980,
+    hyundai: 870,
+    kia: 650
+  }
+
+  const carMakes: DropdownOption[] = VEHICLE_MAKES.map(make => ({
+    ...make,
+    icon: <FaCar />,
+    count: makeCounts[make.value] || 0
+  }))
 
   const bodyTypes: DropdownOption[] = [
     { value: 'sedan', label: 'Sedan', icon: <FaCar />, count: 125430 },
@@ -206,6 +216,60 @@ export default function HeroSection() {
 
   const handleInputChange = (field: string, value: string) => {
     setSearchData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleSearch = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    
+    if (searchData.make) {
+      params.set('make', searchData.make)
+    }
+    if (searchData.year) {
+      params.set('year', searchData.year)
+    }
+    if (searchData.transmission) {
+      // Map transmission values to match SearchResults options
+      const transmissionMap: { [key: string]: string } = {
+        'automatic': 'Automatic',
+        'manual': 'Manual',
+        'cvt': 'CVT',
+        'semi-automatic': 'Automatic'
+      }
+      const mappedTransmission = transmissionMap[searchData.transmission] || searchData.transmission
+      params.set('transmission', mappedTransmission)
+    }
+    if (searchData.fuelType) {
+      // Map fuel type values to match SearchResults options
+      const fuelTypeMap: { [key: string]: string } = {
+        'gasoline': 'Petrol',
+        'diesel': 'Diesel',
+        'hybrid': 'Hybrid',
+        'electric': 'Electric',
+        'lpg': 'Petrol'
+      }
+      const mappedFuelType = fuelTypeMap[searchData.fuelType] || searchData.fuelType
+      params.set('fuelType', mappedFuelType)
+    }
+    if (searchData.priceRange) {
+      // Parse price range if needed (e.g., "under5k" -> priceMin=0, priceMax=5)
+      // For now, just pass it as is if it's a simple format
+      const priceMap: { [key: string]: { min: string; max: string } } = {
+        'under5k': { min: '0', max: '5' },
+        '5k-10k': { min: '5', max: '10' },
+        '10k-20k': { min: '10', max: '20' },
+        '20k-30k': { min: '20', max: '30' },
+        '30k-50k': { min: '30', max: '50' },
+        'over50k': { min: '50', max: '1000' }
+      }
+      if (priceMap[searchData.priceRange]) {
+        params.set('priceMin', priceMap[searchData.priceRange].min)
+        params.set('priceMax', priceMap[searchData.priceRange].max)
+      }
+    }
+    
+    const queryString = params.toString()
+    router.push(`/search${queryString ? `?${queryString}` : ''}`)
   }
 
   return (
@@ -372,6 +436,7 @@ export default function HeroSection() {
           <div className="text-center">
             <a 
               href="/search"
+              onClick={handleSearch}
               className="inline-flex items-center bg-gradient-to-r from-red-600 to-red-700 text-white py-4 px-10 rounded-xl font-black text-lg shadow-2xl hover:shadow-red-500/25 hover:from-red-700 hover:to-red-800 transition-all duration-300 transform hover:scale-105 uppercase tracking-wide"
             >
               <FaSearch className="w-5 h-5 mr-2" />

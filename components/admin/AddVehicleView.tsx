@@ -1,10 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { createVehicle } from '@/lib/admin/api'
+import { useState, useEffect } from 'react'
+import { createVehicle, updateVehicle } from '@/lib/admin/api'
 import type { CreateVehicleData } from '@/lib/admin/api'
+import type { Vehicle } from '@/lib/vehicle/types'
+import { VEHICLE_MAKES } from '@/lib/constants/vehicleMakes'
 
-export default function AddVehicleView() {
+interface AddVehicleViewProps {
+  vehicle?: Vehicle | null
+  onSuccess?: () => void
+}
+
+export default function AddVehicleView({ vehicle, onSuccess }: AddVehicleViewProps) {
   const [formData, setFormData] = useState<CreateVehicleData>({
     make: '',
     model: '',
@@ -17,13 +24,58 @@ export default function AddVehicleView() {
     engine: '',
     drivetrain: '',
     description: '',
-    images: [],
-    isActive: true,
+    images: []
   })
   const [imagesInput, setImagesInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const isEditMode = !!vehicle
+
+  // Populate form when vehicle prop changes
+  useEffect(() => {
+    if (vehicle) {
+      setFormData({
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        year: vehicle.year || '',
+        sellingPrice: vehicle.sellingPrice || vehicle.price || '',
+        mileage: vehicle.mileage || '',
+        transmission: vehicle.transmission || '',
+        fuelType: vehicle.fuelType || '',
+        color: vehicle.color || '',
+        engine: vehicle.engine || '',
+        drivetrain: vehicle.drivetrain || '',
+        description: vehicle.description || '',
+        images: vehicle.images || []
+      })
+      // Set images input for display
+      if (vehicle.images && Array.isArray(vehicle.images)) {
+        setImagesInput(vehicle.images.join('\n'))
+      } else if (vehicle.image) {
+        setImagesInput(vehicle.image)
+      } else {
+        setImagesInput('')
+      }
+    } else {
+      // Reset form for new vehicle
+      setFormData({
+        make: '',
+        model: '',
+        year: '',
+        sellingPrice: '',
+        mileage: '',
+        transmission: '',
+        fuelType: '',
+        color: '',
+        engine: '',
+        drivetrain: '',
+        description: '',
+        images: []
+      })
+      setImagesInput('')
+    }
+  }, [vehicle])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -51,14 +103,6 @@ export default function AddVehicleView() {
     }))
   }
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: checked,
-    }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -71,27 +115,41 @@ export default function AddVehicleView() {
         throw new Error('Please fill in all required fields (Make, Model, Year, Selling Price)')
       }
 
-      await createVehicle(formData)
-      setSuccess(true)
-      // Reset form
-      setFormData({
-        make: '',
-        model: '',
-        year: '',
-        sellingPrice: '',
-        mileage: '',
-        transmission: '',
-        fuelType: '',
-        color: '',
-        engine: '',
-        drivetrain: '',
-        description: '',
-        images: [],
-        isActive: true,
-      })
-      setImagesInput('')
+      if (isEditMode && vehicle) {
+        const vehicleId = vehicle._id || vehicle.id?.toString() || ''
+        if (!vehicleId) {
+          throw new Error('Vehicle ID is required for updating')
+        }
+        await updateVehicle(vehicleId, formData)
+        setSuccess(true)
+        if (onSuccess) {
+          onSuccess()
+        }
+      } else {
+        await createVehicle(formData)
+        setSuccess(true)
+        // Reset form only for new vehicles
+        setFormData({
+          make: '',
+          model: '',
+          year: '',
+          sellingPrice: '',
+          mileage: '',
+          transmission: '',
+          fuelType: '',
+          color: '',
+          engine: '',
+          drivetrain: '',
+          description: '',
+          images: []
+        })
+        setImagesInput('')
+        if (onSuccess) {
+          onSuccess()
+        }
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to create vehicle')
+      setError(err.message || (isEditMode ? 'Failed to update vehicle' : 'Failed to create vehicle'))
     } finally {
       setLoading(false)
     }
@@ -99,7 +157,9 @@ export default function AddVehicleView() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Add New Vehicle</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">
+        {isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}
+      </h2>
 
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4">
@@ -109,7 +169,9 @@ export default function AddVehicleView() {
 
       {success && (
         <div className="mb-4 rounded-md bg-green-50 p-4">
-          <div className="text-sm text-green-800">Vehicle created successfully!</div>
+          <div className="text-sm text-green-800">
+            {isEditMode ? 'Vehicle updated successfully!' : 'Vehicle created successfully!'}
+          </div>
         </div>
       )}
 
@@ -120,15 +182,21 @@ export default function AddVehicleView() {
             <label htmlFor="make" className="block text-sm font-medium text-gray-700">
               Make <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               name="make"
               id="make"
               required
               value={formData.make}
               onChange={handleChange}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
+            >
+              <option value="">Select Make...</option>
+              {VEHICLE_MAKES.map((make) => (
+                <option key={make.value} value={make.value}>
+                  {make.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -313,22 +381,6 @@ export default function AddVehicleView() {
               </p>
             )}
           </div>
-
-          <div className="sm:col-span-2">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="isActive"
-                id="isActive"
-                checked={formData.isActive}
-                onChange={handleCheckboxChange}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-              />
-              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                Active (visible on website)
-              </label>
-            </div>
-          </div>
         </div>
 
         <div className="mt-6">
@@ -337,7 +389,10 @@ export default function AddVehicleView() {
             disabled={loading}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating Vehicle...' : 'Create Vehicle'}
+            {loading 
+              ? (isEditMode ? 'Updating Vehicle...' : 'Creating Vehicle...') 
+              : (isEditMode ? 'Update Vehicle' : 'Create Vehicle')
+            }
           </button>
         </div>
       </form>

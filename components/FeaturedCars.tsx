@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { FaCar, FaCalendarAlt, FaTachometerAlt, FaArrowRight } from 'react-icons/fa'
 import { fetchVehicles, Vehicle } from '@/lib/api'
+import { getMakeLabel } from '@/lib/constants/vehicleMakes'
 
 export default function FeaturedCars() {
   const [featuredCars, setFeaturedCars] = useState<Vehicle[]>([])
@@ -98,7 +99,7 @@ export default function FeaturedCars() {
                 <div className="relative overflow-hidden">
                   <img
                     src={getVehicleImage(car)}
-                    alt={`${car.make || 'Unknown'} ${car.model || 'Vehicle'}`}
+                    alt={`${car.make ? getMakeLabel(car.make) : 'Unknown'} ${car.model || 'Vehicle'}`}
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
@@ -109,7 +110,7 @@ export default function FeaturedCars() {
                   )}
                   <div className="absolute bottom-4 left-4 right-4">
                     <h3 className="text-white font-black text-lg mb-1">
-                      {car.make || 'Unknown'} {car.model || 'Vehicle'}
+                      {car.make ? getMakeLabel(car.make) : 'Unknown'} {car.model || 'Vehicle'}
                     </h3>
                     {car.mileage && (
                       <div className="flex items-center text-red-400 text-sm font-bold">
