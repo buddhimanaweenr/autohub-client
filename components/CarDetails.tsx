@@ -6,6 +6,7 @@ import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 import BookingWidget from './BookingWidget'
 import QuoteRequestWidget from './QuoteRequestWidget'
 import { fetchVehicleById, fetchVehicles, Vehicle } from '@/lib/api'
+import { getMakeLabel } from '@/lib/constants/vehicleMakes'
 
 interface CarDetailsProps {
   carId: string
@@ -130,7 +131,7 @@ export default function CarDetails({ carId }: CarDetailsProps) {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">
-              {carData.make || 'Unknown'} {carData.model || 'Vehicle'} {carData.year || ''}
+              {carData.make ? getMakeLabel(carData.make) : 'Unknown'} {carData.model || 'Vehicle'} {carData.year || ''}
             </h1>
 
             {/* Image Gallery */}
@@ -138,7 +139,7 @@ export default function CarDetails({ carId }: CarDetailsProps) {
               <div className="relative">
                 <img
                   src={images[currentImageIndex]}
-                  alt={`${carData.make || 'Unknown'} ${carData.model || 'Vehicle'}`}
+                  alt={`${carData.make ? getMakeLabel(carData.make) : 'Unknown'} ${carData.model || 'Vehicle'}`}
                   className="w-full h-96 object-cover rounded-lg"
                 />
                 <button
@@ -167,7 +168,7 @@ export default function CarDetails({ carId }: CarDetailsProps) {
                   >
                     <img
                       src={image}
-                      alt={`${carData.make || 'Unknown'} ${carData.model || 'Vehicle'} ${index + 1}`}
+                      alt={`${carData.make ? getMakeLabel(carData.make) : 'Unknown'} ${carData.model || 'Vehicle'} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -179,6 +180,12 @@ export default function CarDetails({ carId }: CarDetailsProps) {
             <div className="bg-white rounded-lg p-6 mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Specs</h2>
               <div className="grid grid-cols-2 gap-4">
+                {carData.make && (
+                  <div>
+                    <span className="text-gray-600">Make:</span>
+                    <span className="ml-2 font-medium">{getMakeLabel(carData.make)}</span>
+                  </div>
+                )}
                 {carData.year && (
                   <div>
                     <span className="text-gray-600">Year:</span>
@@ -254,12 +261,12 @@ export default function CarDetails({ carId }: CarDetailsProps) {
                       >
                         <img
                           src={carImage}
-                          alt={`${car.make || 'Unknown'} ${car.model || 'Vehicle'}`}
+                          alt={`${car.make ? getMakeLabel(car.make) : 'Unknown'} ${car.model || 'Vehicle'}`}
                           className="w-full h-32 object-cover"
                         />
                         <div className="p-3">
                           <h3 className="font-semibold text-gray-900 text-sm">
-                            {car.make || 'Unknown'} {car.model || 'Vehicle'}
+                            {car.make ? getMakeLabel(car.make) : 'Unknown'} {car.model || 'Vehicle'}
                           </h3>
                           {car.year && <p className="text-gray-600 text-xs mb-1">{car.year}</p>}
                           {car.mileage && <p className="text-gray-500 text-xs mb-1">{formatMileage(car.mileage)}</p>}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { FaCalendarAlt, FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt, FaCheck, FaArrowRight, FaArrowLeft } from 'react-icons/fa'
 import { createVehicleInspection } from '@/lib/api'
 import type { Vehicle } from '@/lib/api'
+import { getMakeLabel } from '@/lib/constants/vehicleMakes'
 
 interface BookingData {
   carId: string
@@ -56,7 +57,7 @@ export default function BookingWidget({ vehicle, onClose }: BookingWidgetProps) 
   // Update booking data when vehicle prop changes
   useEffect(() => {
     if (vehicle) {
-      const vehicleName = `${vehicle.make || ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() || 'Vehicle'
+      const vehicleName = `${vehicle.make ? getMakeLabel(vehicle.make) : ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() || 'Vehicle'
       // Use id or _id (API returns _id, but we normalize it to id)
       const vehicleId = vehicle.id?.toString() || vehicle._id?.toString() || ''
       setBookingData(prev => ({
