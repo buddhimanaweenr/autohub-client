@@ -41,7 +41,7 @@ export default function DashboardStats() {
       textColor: 'text-blue-600'
     },
     {
-      title: 'Vehicle Inspections',
+      title: 'Inspections',
       value: stats.loading ? '...' : stats.inspections,
       icon: FaCalendarCheck,
       color: 'bg-green-500',
